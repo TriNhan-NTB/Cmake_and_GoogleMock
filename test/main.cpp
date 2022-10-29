@@ -16,7 +16,7 @@ class my_Mock
         MOCK_METHOD(int, sum, (int,int));
         static my_Mock& GetInstance()
         {
-            static my_Mock& r = new my_Mock;
+            static my_Mock r = my_Mock();
             return r;
         }
 };
@@ -30,6 +30,7 @@ TEST(Test1, BASIC1)
 
 int main(int argc, char **argv)
 {
+    cout << "abc";
     ::testing::InitGoogleTest(&argc, argv);
     int a = RUN_ALL_TESTS();
     return 0;

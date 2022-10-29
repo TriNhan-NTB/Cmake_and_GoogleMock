@@ -1,6 +1,7 @@
 #include<iostream>
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
+#include <memory>
 
 using namespace std;
 using ::testing::Return;
@@ -11,10 +12,11 @@ using ::testing::Expectation;
 using ::testing::Eq;
 using ::testing::Invoke;
 using ::testing::DoDefault;
+using ::testing::NiceMock;
 
 class CL1
 {
-  protected:
+  public:
     int testb();
     int rt1();
     int rt2();
@@ -26,18 +28,30 @@ class CL1
 
 class MyTest: public CL1
 {
+  private:
+    CL1 cl1;
   public:
 
     int Init()
     {
-      return CL1::testb();
+      return cl1.testb();
     }
-    int Ret1(){return CL1::rt1();}
-    int Ret2(){return CL1::rt2();}
-    int Ret3(){return CL1::rt3();}
-    int ADD(int a, int b){return CL1::add(a,b);}
+    int Ret1(){return cl1.rt1();}
+    int Ret2(){return cl1.rt2();}
+    int Ret3(){return cl1.rt3();}
+    int ADD(int a, int b){return cl1.add(a,b);}
+    void call_Ret1_Ret2()
+    {
+      int a = Ret1();
+      int b = Ret2();
+    }
 };
 
+class MyFixture: public ::testing::Test
+{
+  public:
+    std::shared_ptr<MyTest> mytest_1 = std::make_shared<MyTest>();
+};
 
 
 class MockTest
@@ -54,6 +68,11 @@ class MockTest
   {
     static MockTest r = MockTest();
     return r;
+  }
+  static NiceMock<MockTest>& GetInstance_Nice()
+  {
+    static NiceMock<MockTest> instance;
+    return instance;
   }
   
 };
@@ -181,9 +200,33 @@ TEST(Mytest, Basic_ON_CALL)
 
   MyTest m;
   cout << "Basic_ON_CALL: " << m.Ret1() << endl;
-  //m.Ret1();
-  
+}
 
+TEST(Mytest, Basic_ONCALL1)
+{
+  auto& mock = MockTest::GetIntance();
+  ON_CALL(mock,add(3,3)).WillByDefault(Return(9));
+  EXPECT_CALL(mock, add)
+    .Times(::testing::AnyNumber());
+  MyTest m;
+  //EXPECT_EQ(9, m.ADD(3,4)); //failed
+  EXPECT_EQ(9, m.ADD(3,3)); //pass
+}
+
+
+TEST_F(MyFixture, Basic_NiceMock)
+{
+  auto& mock1 = MockTest::GetIntance();
+  auto& mock2 = MockTest::GetInstance_Nice();
+  static MockTest mock3;
+  static NiceMock<MockTest> mock4;
+
+  EXPECT_CALL(mock1, rt1)
+      .Times(1)
+      .WillOnce(Return(false));
+
+  mytest_1->Ret1();
+  mytest_1->Ret2();
 }
 
 int main(int argc, char** argv)
